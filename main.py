@@ -7,6 +7,7 @@ app = FastAPI()
 
 GEMINI_API_KEY = config('GEMINI_API_KEY')
 client = genai.Client(api_key=GEMINI_API_KEY)
+model = 'gemini-3.1-flash-lite'
 
 class Ask(BaseModel):
     question: str
@@ -14,8 +15,7 @@ class Ask(BaseModel):
     json_mode: bool = Field(default=False, description='True for strict json output.')
 
 @app.post('/api/ask/')
-def chat(ask: Ask):
-    model = 'gemini-3.1-flash-lite'
+async def ask_gemini(ask: Ask):
     gemini_config = {}
 
     if ask.sys_inst:
@@ -48,3 +48,43 @@ def chat(ask: Ask):
             return {'error': error_str}
         
     return {'answer': response.text}
+
+
+class ChatRequest(BaseModel):
+    message: str
+    history: list | None = Field(default=None, description="Previous conversation turns")
+    sys_inst: str | None = Field(default=None, description="Optional system instructions")
+    json_mode: bool = Field(default=False, description="True for strict json output")
+
+@app.post('/api/chat/')
+async def chat_endpoint(req: ChatRequest):
+    gemini_config = {}
+
+    if req.sys_inst:
+        gemini_config['system_instruction'] = req.sys_inst
+
+    if req.json_mode:
+        gemini_config['response_mime_type'] = 'application/json'
+
+    try:
+        chat_session = client.chats.create(
+            model=model,
+            history=req.history if req.history else None,
+            config=gemini_config if gemini_config else None
+        )
+        
+        response = chat_session.send_message(req.message)
+        
+    except Exception as e:
+        error_str = str(e)
+        if '429' in error_str or 'resource_exhausted' in error_str:
+            return {"error": "Rate limit exceeded. Please slow down.", "details": error_str}
+        elif '503' in error_str or 'service_unavailable' in error_str:
+            return {"error": f"The model {model} is overloaded.", "details": error_str}
+        else:
+            return {'error': error_str}
+        
+    return {
+        'response': response.text,
+        'history': chat_session.get_history()
+    }
