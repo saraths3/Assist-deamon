@@ -1,13 +1,9 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
-from decouple import config
-from google import genai
+from config import client, DEFAULT_MODEL
 
 app = FastAPI()
-
-GEMINI_API_KEY = config('GEMINI_API_KEY')
-client = genai.Client(api_key=GEMINI_API_KEY)
-model = 'gemini-3.1-flash-lite'
+model = DEFAULT_MODEL
 
 class Ask(BaseModel):
     question: str
