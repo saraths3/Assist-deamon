@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - assist-daemon{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="/static/css/index.css">
+<div class="container">
+    <h1>assist-daemon</h1>
+    <div class="subtitle">Local AI code companion & system bridge</div>
+
+    <div class="card">
+        <h2>Push File for Analysis</h2>
+        <br>
+        <form action="/api/file/" method="POST">
+            <label for="file_path">File Path</label>
+            <input type="text" id="file_path" name="file_path" value="main.py" required>
+
+            <label for="content">Code Content</label>
+            <textarea id="content" name="content" rows="6" required>print("Hello from Material 3 UI")</textarea>
+
+            <label for="prompt">Instruction</label>
+            <input type="text" id="prompt" name="prompt" value="Review and optimize this code">
+
+            <button type="submit">Submit to Daemon</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

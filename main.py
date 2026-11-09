@@ -1,8 +1,11 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from config import client, DEFAULT_MODEL
-
+from views import router as web_router
+from fastapi.staticfiles import StaticFiles
 app = FastAPI()
+app.mount('/static/', StaticFiles(directory='static'), name='static')
+app.include_router(web_router)
 model = DEFAULT_MODEL
 
 class Ask(BaseModel):
@@ -84,3 +87,35 @@ async def chat_endpoint(req: ChatRequest):
         'response': response.text,
         'history': chat_session.get_history()
     }
+
+class File(BaseModel):
+    file_path: str
+    content: str
+    prompt: str
+
+@app.post('/api/file/')
+async def FilePayload(file: File):
+    prompt = (
+        f'file path: {file.file_path} \n\n'
+        f'file content: {file.content} \n\n'
+        f'prompt: {file.prompt}'
+        )
+    try:
+        responce = client.models.generate_content(
+            model=model,
+            contents=prompt
+        )
+
+    except Exception as e:
+        error_str = str(e)
+        if '429' in error_str or 'resource_exhausted' in error_str:
+            return {"error": "Rate limit exceeded. Please slow down.", "details": error_str}
+        elif '503' in error_str or 'service_unavailable' in error_str:
+            return {"error": f"The model {model} is overloaded.", "details": error_str}
+        else:
+            return {'error': error_str}
+        
+    return {
+        'path': file.file_path, 
+        'responce': responce.text
+        }
