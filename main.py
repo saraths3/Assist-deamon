@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 from config import client, DEFAULT_MODEL
 from views import router as web_router
 from fastapi.staticfiles import StaticFiles
+from typing import Optional
+
 app = FastAPI()
 app.mount('/static/', StaticFiles(directory='static'), name='static')
 app.include_router(web_router)
@@ -89,14 +91,14 @@ async def chat_endpoint(req: ChatRequest):
     }
 
 class File(BaseModel):
-    file_path: str
-    content: str
+    file_name: Optional[str] = None
+    content: Optional[str] = None
     prompt: str
 
 @app.post('/api/file/')
 async def FilePayload(file: File):
     prompt = (
-        f'file path: {file.file_path} \n\n'
+        f'file name: {file.file_name} \n\n'
         f'file content: {file.content} \n\n'
         f'prompt: {file.prompt}'
         )
@@ -114,8 +116,8 @@ async def FilePayload(file: File):
             return {"error": f"The model {model} is overloaded.", "details": error_str}
         else:
             return {'error': error_str}
-        
+
     return {
-        'path': file.file_path, 
+        'name': file.file_name, 
         'responce': responce.text
         }
